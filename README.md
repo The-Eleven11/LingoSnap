@@ -20,4 +20,18 @@ GUI窗口应该由两部分内容组成：窗口上方的横条菜单栏（分�
        + Google Translate API被选择后的设置，即要求用户设置API key，展示已经请求了API多少字符，和一个复位字符统计的按钮
        + Argos Translate 被选择后的设置：可能需要用户管理语言包，需要展示已经安装的语言包和Install Package的选项
      4. 翻译器的页面语言：英语/中文
-     5. 关于，包含logo和链接到github仓库
+     5. Terminal翻译的默认目标语言（下拉菜单）
+     6. 关于，包含logo和链接到github仓库
+有一点需要注意的是，可供选择的语言需要根据引擎决定，使用Google translate api可以展示所有google支持的语言。当使用Argos Translate时，只展示用户已经已经配置了语言包的语言。
+
+
+Terminal翻译的描述：
+terminal翻译应该翻译前面第n条terminal的输出
+前n条翻译的意思是，当用户在terminal中调用LingoSnap，运行制定的命令后，程序能够捕捉到用户指定的前面第n条terminal的输出进行翻译(仅将获取到的内容翻译到设置中的默认语言，或者在命令中指定，这样程序需要自动识别捕捉到的语言)。比如：
+     ~user: xxx
+     terminal: The test output
+     ~user: lingo -t 1
+     terminal: 测试输出
+     ~user: lingo -t 2 -l france
+     terminal: Sortie de test
+如果语言不被支持要提示用户语言不被支持
