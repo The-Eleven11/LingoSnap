@@ -1,0 +1,26 @@
+Source: lingosnap
+Section: utils
+Priority: optional
+Maintainer: LingoSnap Team <lingosnap@example.com>
+Build-Depends: debhelper (>= 9), python3-all (>= 3.10), dh-python, python3-setuptools
+Standards-Version: 4.5.0
+Homepage: https://github.com/The-Eleven11/LingoSnap
+
+Package: lingosnap
+Architecture: all
+Depends: ${python3:Depends}, ${misc:Depends},
+         python3-pyqt6,
+         python3-pil,
+         tesseract-ocr,
+         tesseract-ocr-eng,
+         tesseract-ocr-chi-sim
+Description: Instant translation application
+ LingoSnap is a desktop translation application that provides instant
+ translation via global hotkeys, screen OCR, and terminal integration.
+ .
+ Features include:
+  - Capture selected text with hotkeys for instant translation
+  - Screenshot OCR for translating image text
+  - Translation history
+  - Multiple translation engines (Google Translate, Argos Translate)
+  - Terminal integration for translating command output
