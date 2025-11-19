@@ -1,0 +1,131 @@
+Role: You are a Senior Software Architect and Python Developer specializing in Linux desktop application development, GUI design (PyQt/PySide), and system-level integration.
+
+Task: Create a comprehensive technical design document, project file structure, and core code implementation plan for a desktop translation application named "LingoSnap".
+
+Target Platform: Ubuntu Linux (Primary), with an architecture designed for future migration to Windows and macOS.
+
+1. Project Overview
+LingoSnap is a desktop tool providing instant translation via global hotkeys, screen OCR, and terminal integration.
+
+Core Philosophy: Instant translation at your fingertips.
+
+Deployment: Packaged as a .deb installer for Ubuntu.
+
+System Behavior: The app launches on startup, runs in the background, and resides in the System Tray. Closing the window minimizes to tray; quitting requires a right-click menu action on the tray icon.
+
+2. Technical Stack Requirements (Recommended)
+Language: Python 3.10+
+
+GUI Framework: PyQt6 or PySide6 (Standard for Linux, cross-platform support).
+
+OCR Engine: pytesseract (wrapper for Tesseract OCR).
+
+Translation Engines:
+
+Argos Translate: Offline/Local neural machine translation.
+
+Google Translate API: Online (requires User API Key).
+
+System Integration: pynput or global hotkey manager compatible with X11/Wayland; setproctitle for process management.
+
+Data Storage: sqlite3 for translation history.
+
+3. Functional Modules & Requirements
+A. Input Methods (Global Shortcuts)
+Text Capture (Default: Ctrl+C+C):
+
+Logic: When the user selects text and double-presses 'C' while holding 'Ctrl', the app must capture the selected text to the clipboard, bring the GUI to the front, and auto-populate the source text box.
+
+OCR Capture (Default: Ctrl+F8):
+
+Logic: Triggers a screenshot overlay (crosshair cursor). User selects an area. The image is passed to Tesseract OCR. The result populates the source text box.
+
+B. Translation Logic
+Trigger:
+
+Immediate: If initiated via Shortcut (Text or OCR).
+
+Debounced: If user types manually in the input box, wait for 2 seconds of inactivity before triggering.
+
+Visuals: Show a lightweight loading animation/spinner during translation requests.
+
+C. Graphical User Interface (GUI)
+Languages: Support English and Chinese (Switchable in settings).
+
+Layout: Top Menu Bar (Tabs: Text Translate, History, Settings) + Main Content Area.
+
+Tab 1: Text Translate
+
+Top: Source Language Dropdown | Swap Button (<->) | Target Language Dropdown.
+
+Note: Dropdown content depends on the active engine. Argos only shows installed packages; Google shows all supported languages.
+
+Middle: Two large TextEdits (Source vs. Target).
+
+Sync: Both boxes must support scrolling and sync scroll position.
+
+Editable: Both are editable, but only changes to Source trigger re-translation.
+
+Font: Ergonomic size for readability.
+
+Tab 2: History
+
+Storage: Persist history locally (limit configurable in Settings).
+
+Display: Scrollable list of Cards.
+
+Card Content: Timestamp, Language Pair (e.g., EN->CN), Source Preview, Result Preview.
+
+Action: Clicking a card jumps to the "Text Translate" tab and restores that session.
+
+Tab 3: Settings
+
+Shortcuts: Customizable keybinding for Text Capture and OCR Capture.
+
+Engine Selector: Toggle between Argos and Google.
+
+Google Settings: Input Field for API Key, Character Usage Counter, Reset Counter Button.
+
+Argos Settings: List of installed language packs, UI to "Install New Package".
+
+UI Behavior: Non-active engine settings are visible but disabled (grayed out).
+
+UI Language: Switch between English/Chinese.
+
+Terminal Default Target: Dropdown for default CLI translation language.
+
+About: App Logo + GitHub Link.
+
+D. Terminal Integration (CLI)
+Command: lingo
+
+Functionality: Translate previous N lines of terminal output.
+
+Syntax: lingo -t <n> [-l <target_language>]
+
+Example: lingo -t 1 (Translates the immediate last command output to default language).
+
+Example: lingo -t 2 -l fr (Translates the 2nd to last output to French).
+
+Constraint: The program must attempt to detect the language of the captured output automatically. If the target language code is invalid, output an error message.
+
+Technical Challenge: Please propose a method to implement the "capture previous output" feature (e.g., via shell history integration, a wrapper function, or screen reading accessibility APIs), as standard commands cannot easily read the stdout of previous commands.
+
+4. Deliverables
+Project Structure: A complete tree structure of the Python project.
+
+Dependencies: A requirements.txt file.
+
+Core Code Implementation:
+
+Main entry point with System Tray logic.
+
+The GUI Class structure (PyQt6).
+
+The Translation Engine Wrapper (Strategy Pattern for switching engines).
+
+The Screen Capture/OCR Snippet.
+
+The Terminal Integration logic/script.
+
+Packaging Instructions: A brief guide on how to package this into a .deb file.
