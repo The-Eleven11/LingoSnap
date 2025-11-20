@@ -6,7 +6,6 @@ from PyQt6.QtWidgets import QWidget, QApplication
 from PyQt6.QtCore import Qt, QRect, QPoint, pyqtSignal
 from PyQt6.QtGui import QPainter, QColor, QPen, QPixmap, QScreen
 from PIL import Image
-import io
 
 
 class ScreenshotWidget(QWidget):
@@ -103,10 +102,26 @@ class ScreenshotWidget(QWidget):
         cropped = self.screenshot.copy(rect)
         
         # Convert QPixmap to PIL Image
-        buffer = io.BytesIO()
-        cropped.save(buffer, 'PNG')
-        buffer.seek(0)
-        pil_image = Image.open(buffer)
+        # PyQt6 doesn't support saving to BytesIO directly, so convert via QImage
+        qimage = cropped.toImage()
+        
+        # Convert QImage to bytes
+        byte_array = qimage.bits().asarray(qimage.sizeInBytes())
+        
+        # Create PIL Image from raw data
+        width = qimage.width()
+        height = qimage.height()
+        
+        # QImage format is typically ARGB32 or RGB32
+        if qimage.format() == qimage.Format.Format_RGB32 or qimage.format() == qimage.Format.Format_ARGB32:
+            # Convert to RGB
+            pil_image = Image.frombytes('RGBA', (width, height), byte_array, 'raw', 'BGRA')
+            pil_image = pil_image.convert('RGB')
+        else:
+            # Fallback: convert to RGB888 first
+            qimage = qimage.convertToFormat(qimage.Format.Format_RGB888)
+            byte_array = qimage.bits().asarray(qimage.sizeInBytes())
+            pil_image = Image.frombytes('RGB', (width, height), byte_array, 'raw', 'RGB')
         
         # Clean up
         self.hide()
