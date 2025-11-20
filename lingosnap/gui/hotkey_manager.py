@@ -5,6 +5,7 @@ Global hotkey manager
 from PyQt6.QtCore import QObject, pyqtSignal, QThread
 from pynput import keyboard
 import time
+import sys
 
 
 class HotkeyListener(QThread):
@@ -12,6 +13,7 @@ class HotkeyListener(QThread):
     
     text_capture = pyqtSignal()
     ocr_capture = pyqtSignal()
+    error_occurred = pyqtSignal(str)
     
     def __init__(self):
         super().__init__()
@@ -36,6 +38,7 @@ class HotkeyListener(QThread):
                     if current_time - self.last_c_press_time < 0.5:  # 500ms window
                         self.c_press_count += 1
                         if self.c_press_count >= 2:
+                            print("DEBUG: Ctrl+C+C detected, triggering text capture", file=sys.stderr)
                             self.text_capture.emit()
                             self.c_press_count = 0
                     else:
@@ -44,10 +47,14 @@ class HotkeyListener(QThread):
                 
                 # Check for Ctrl+F8
                 if self.ctrl_pressed and key == keyboard.Key.f8:
+                    print("DEBUG: Ctrl+F8 detected, triggering OCR capture", file=sys.stderr)
                     self.ocr_capture.emit()
                 
             except AttributeError:
                 pass
+            except Exception as e:
+                print(f"ERROR in hotkey listener on_press: {e}", file=sys.stderr)
+                self.error_occurred.emit(str(e))
         
         def on_release(key):
             try:
@@ -56,12 +63,21 @@ class HotkeyListener(QThread):
                     self.c_press_count = 0
             except AttributeError:
                 pass
+            except Exception as e:
+                print(f"ERROR in hotkey listener on_release: {e}", file=sys.stderr)
         
         # Start listener
-        with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
-            while self.running:
-                time.sleep(0.1)
-            listener.stop()
+        try:
+            print("Starting hotkey listener...", file=sys.stderr)
+            with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
+                while self.running:
+                    time.sleep(0.1)
+                listener.stop()
+            print("Hotkey listener stopped.", file=sys.stderr)
+        except Exception as e:
+            error_msg = f"Failed to start hotkey listener: {e}"
+            print(f"ERROR: {error_msg}", file=sys.stderr)
+            self.error_occurred.emit(error_msg)
     
     def stop(self):
         """Stop the listener"""
@@ -79,10 +95,19 @@ class HotkeyManager(QObject):
         self.listener = HotkeyListener()
         self.listener.text_capture.connect(self.text_capture_triggered.emit)
         self.listener.ocr_capture.connect(self.ocr_capture_triggered.emit)
+        self.listener.error_occurred.connect(self.on_error)
+    
+    def on_error(self, error_msg):
+        """Handle hotkey listener errors"""
+        print(f"Hotkey manager error: {error_msg}", file=sys.stderr)
     
     def start(self):
         """Start listening for hotkeys"""
-        self.listener.start()
+        try:
+            self.listener.start()
+            print("Hotkey manager started successfully", file=sys.stderr)
+        except Exception as e:
+            print(f"Failed to start hotkey manager: {e}", file=sys.stderr)
     
     def stop(self):
         """Stop listening for hotkeys"""
