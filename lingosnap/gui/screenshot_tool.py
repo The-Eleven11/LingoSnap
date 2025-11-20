@@ -2,6 +2,7 @@
 Screenshot capture tool
 """
 
+import sys
 from PyQt6.QtWidgets import QWidget, QApplication
 from PyQt6.QtCore import Qt, QRect, QPoint, pyqtSignal
 from PyQt6.QtGui import QPainter, QColor, QPen, QPixmap, QScreen
@@ -29,16 +30,31 @@ class ScreenshotWidget(QWidget):
     
     def start_capture(self):
         """Start screenshot capture"""
-        # Capture all screens
-        screens = QApplication.screens()
-        if not screens:
+        # First, capture the screen BEFORE showing the overlay
+        # This is crucial because the overlay will be captured otherwise
+        
+        screen = QApplication.primaryScreen()
+        if not screen:
+            print("Error: No screen found", file=sys.stderr)
             return
         
-        # Get primary screen
-        screen = screens[0]
-        self.screenshot = screen.grabWindow(0)
+        # Capture the entire screen
+        # Use the screen's geometry for accurate capture
+        geometry = screen.geometry()
+        self.screenshot = screen.grabWindow(
+            0,  # Window ID (0 for entire screen)
+            geometry.x(),
+            geometry.y(),
+            geometry.width(),
+            geometry.height()
+        )
         
-        # Show overlay
+        # Verify screenshot was captured
+        if self.screenshot.isNull():
+            print("Warning: Screenshot may be empty. This can happen on Wayland.", file=sys.stderr)
+            print("Tip: Try running on X11 (select 'Ubuntu on Xorg' at login)", file=sys.stderr)
+        
+        # Show overlay AFTER capturing
         self.showFullScreen()
         self.setCursor(Qt.CursorShape.CrossCursor)
     
@@ -101,27 +117,59 @@ class ScreenshotWidget(QWidget):
         # Crop the screenshot
         cropped = self.screenshot.copy(rect)
         
+        # Check if cropped pixmap is valid
+        if cropped.isNull():
+            print("Error: Failed to crop screenshot", file=sys.stderr)
+            self.cancel_capture()
+            return
+        
         # Convert QPixmap to PIL Image
         # PyQt6 doesn't support saving to BytesIO directly, so convert via QImage
         qimage = cropped.toImage()
         
+        # Check if conversion was successful
+        if qimage.isNull():
+            print("Error: Failed to convert pixmap to image", file=sys.stderr)
+            self.cancel_capture()
+            return
+        
+        # Get image bits
+        bits = qimage.bits()
+        if bits is None:
+            print("Error: Failed to get image bits", file=sys.stderr)
+            self.cancel_capture()
+            return
+        
         # Convert QImage to bytes
-        byte_array = qimage.bits().asarray(qimage.sizeInBytes())
+        try:
+            byte_array = bits.asarray(qimage.sizeInBytes())
+        except Exception as e:
+            print(f"Error: Failed to convert image to byte array: {e}", file=sys.stderr)
+            self.cancel_capture()
+            return
         
         # Create PIL Image from raw data
         width = qimage.width()
         height = qimage.height()
         
-        # QImage format is typically ARGB32 or RGB32
-        if qimage.format() == qimage.Format.Format_RGB32 or qimage.format() == qimage.Format.Format_ARGB32:
-            # Convert to RGB
-            pil_image = Image.frombytes('RGBA', (width, height), byte_array, 'raw', 'BGRA')
-            pil_image = pil_image.convert('RGB')
-        else:
-            # Fallback: convert to RGB888 first
-            qimage = qimage.convertToFormat(qimage.Format.Format_RGB888)
-            byte_array = qimage.bits().asarray(qimage.sizeInBytes())
-            pil_image = Image.frombytes('RGB', (width, height), byte_array, 'raw', 'RGB')
+        try:
+            # QImage format is typically ARGB32 or RGB32
+            if qimage.format() == qimage.Format.Format_RGB32 or qimage.format() == qimage.Format.Format_ARGB32:
+                # Convert to RGB
+                pil_image = Image.frombytes('RGBA', (width, height), byte_array, 'raw', 'BGRA')
+                pil_image = pil_image.convert('RGB')
+            else:
+                # Fallback: convert to RGB888 first
+                qimage = qimage.convertToFormat(qimage.Format.Format_RGB888)
+                bits = qimage.bits()
+                if bits is None:
+                    raise ValueError("Failed to get bits after format conversion")
+                byte_array = bits.asarray(qimage.sizeInBytes())
+                pil_image = Image.frombytes('RGB', (width, height), byte_array, 'raw', 'RGB')
+        except Exception as e:
+            print(f"Error: Failed to create PIL image: {e}", file=sys.stderr)
+            self.cancel_capture()
+            return
         
         # Clean up
         self.hide()
