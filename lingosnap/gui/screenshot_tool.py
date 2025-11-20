@@ -243,45 +243,67 @@ class ScreenshotTool:
         
         # Try different screenshot tools in order of preference
         screenshot_tools = [
-            # GNOME Screenshot (most common on Ubuntu)
+            # GNOME Screenshot (most common on Ubuntu) - most reliable
             ['gnome-screenshot', '-a', '-f', temp_path],
             # KDE Spectacle
             ['spectacle', '-b', '-r', '-n', '-o', temp_path],
-            # Flameshot
-            ['flameshot', 'gui', '-p', temp_path],
-            # ImageMagick import
+            # ImageMagick import - simple and reliable
             ['import', temp_path],
-            # Scrot
+            # Scrot - lightweight and reliable
             ['scrot', '-s', temp_path],
+            # Flameshot - captures to stdout in raw mode, we'll handle separately
+            # Note: flameshot gui mode doesn't support direct file output
         ]
         
         success = False
-        for tool_cmd in screenshot_tools:
-            try:
-                # Check if tool exists
-                tool_name = tool_cmd[0]
-                check_cmd = ['which', tool_name]
-                result = subprocess.run(check_cmd, capture_output=True, timeout=1)
+        
+        # First, try flameshot with special handling (captures to stdout)
+        try:
+            result = subprocess.run(['which', 'flameshot'], capture_output=True, timeout=1)
+            if result.returncode == 0:
+                print("Using screenshot tool: flameshot", file=sys.stderr)
                 
-                if result.returncode == 0:
-                    print(f"Using screenshot tool: {tool_name}", file=sys.stderr)
+                # Flameshot gui mode with raw output to stdout
+                process = subprocess.Popen(
+                    ['flameshot', 'gui', '--raw'],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE
+                )
+                
+                # Wait for the screenshot to be captured to stdout
+                QTimer.singleShot(500, lambda: self.check_flameshot_stdout(temp_path, process, 0))
+                success = True
+        except:
+            pass
+        
+        # If flameshot didn't work, try other tools
+        if not success:
+            for tool_cmd in screenshot_tools:
+                try:
+                    # Check if tool exists
+                    tool_name = tool_cmd[0]
+                    check_cmd = ['which', tool_name]
+                    result = subprocess.run(check_cmd, capture_output=True, timeout=1)
                     
-                    # Run the screenshot tool
-                    # Use subprocess.Popen to run asynchronously
-                    process = subprocess.Popen(
-                        tool_cmd,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE
-                    )
-                    
-                    # Wait for the screenshot to be saved
-                    # Check periodically if file exists and has content
-                    QTimer.singleShot(500, lambda: self.check_screenshot_file(temp_path, process, 0))
-                    success = True
-                    break
-                    
-            except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:
-                continue
+                    if result.returncode == 0:
+                        print(f"Using screenshot tool: {tool_name}", file=sys.stderr)
+                        
+                        # Run the screenshot tool
+                        # Use subprocess.Popen to run asynchronously
+                        process = subprocess.Popen(
+                            tool_cmd,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE
+                        )
+                        
+                        # Wait for the screenshot to be saved
+                        # Check periodically if file exists and has content
+                        QTimer.singleShot(500, lambda: self.check_screenshot_file(temp_path, process, 0))
+                        success = True
+                        break
+                        
+                except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:
+                    continue
         
         if not success:
             print("Error: No system screenshot tool found", file=sys.stderr)
@@ -305,6 +327,103 @@ class ScreenshotTool:
                 self.widget.screenshot_taken.connect(self.on_screenshot_taken)
             
             self.widget.start_capture()
+    
+    def check_flameshot_stdout(self, temp_path, process, retry_count):
+        """
+        Check if flameshot has output screenshot data to stdout
+        
+        Args:
+            temp_path: Path to temporary screenshot file
+            process: The subprocess running flameshot
+            retry_count: Number of times we've checked
+        """
+        max_retries = 60  # Check for up to 30 seconds (60 * 0.5s)
+        
+        # Check if process has finished
+        poll_result = process.poll()
+        
+        if poll_result is not None:
+            # Process finished
+            if poll_result == 0:
+                # Success - read from stdout
+                try:
+                    stdout_data = process.stdout.read()
+                    
+                    if stdout_data and len(stdout_data) > 0:
+                        # Save the image data to temp file
+                        with open(temp_path, 'wb') as f:
+                            f.write(stdout_data)
+                        
+                        print(f"Screenshot captured from flameshot stdout", file=sys.stderr)
+                        
+                        # Load the image
+                        image = Image.open(temp_path)
+                        
+                        # Clean up temp file
+                        try:
+                            os.unlink(temp_path)
+                        except:
+                            pass
+                        
+                        # Restore window
+                        if self.parent:
+                            self.parent.show()
+                        
+                        # Call callback
+                        if self.callback:
+                            self.callback(image)
+                        return
+                    else:
+                        # No data - user cancelled
+                        print("Screenshot tool finished but no data captured (user may have cancelled)", file=sys.stderr)
+                        
+                except Exception as e:
+                    print(f"Error reading flameshot output: {e}", file=sys.stderr)
+            else:
+                # Process finished with error
+                print(f"Screenshot tool exited with code {poll_result}", file=sys.stderr)
+            
+            # Clean up temp file
+            try:
+                os.unlink(temp_path)
+            except:
+                pass
+            
+            # Restore window
+            if self.parent:
+                self.parent.show()
+            
+            # Call callback with None
+            if self.callback:
+                self.callback(None)
+        
+        elif retry_count >= max_retries:
+            # Timeout
+            print("Timeout waiting for screenshot", file=sys.stderr)
+            
+            # Try to terminate the process
+            try:
+                process.terminate()
+            except:
+                pass
+            
+            # Clean up temp file
+            try:
+                os.unlink(temp_path)
+            except:
+                pass
+            
+            # Restore window
+            if self.parent:
+                self.parent.show()
+            
+            # Call callback with None
+            if self.callback:
+                self.callback(None)
+        
+        else:
+            # Still waiting, check again
+            QTimer.singleShot(500, lambda: self.check_flameshot_stdout(temp_path, process, retry_count + 1))
     
     def check_screenshot_file(self, temp_path, process, retry_count):
         """
