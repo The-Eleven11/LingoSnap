@@ -3,8 +3,12 @@ Screenshot capture tool
 """
 
 import sys
+import subprocess
+import tempfile
+import os
+import time
 from PyQt6.QtWidgets import QWidget, QApplication
-from PyQt6.QtCore import Qt, QRect, QPoint, pyqtSignal
+from PyQt6.QtCore import Qt, QRect, QPoint, pyqtSignal, QTimer
 from PyQt6.QtGui import QPainter, QColor, QPen, QPixmap, QScreen
 from PIL import Image
 
@@ -194,6 +198,8 @@ class ScreenshotTool:
         self.parent = parent
         self.widget = None
         self.callback = None
+        self.temp_file = None
+        self.use_system_tool = True  # Default to system tool for better compatibility
     
     def capture(self, callback):
         """
@@ -204,11 +210,224 @@ class ScreenshotTool:
         """
         self.callback = callback
         
-        if not self.widget:
-            self.widget = ScreenshotWidget()
-            self.widget.screenshot_taken.connect(self.on_screenshot_taken)
+        # Try system screenshot tool first for better compatibility
+        if self.use_system_tool:
+            self.capture_with_system_tool()
+        else:
+            # Fallback to built-in method
+            if not self.widget:
+                self.widget = ScreenshotWidget()
+                self.widget.screenshot_taken.connect(self.on_screenshot_taken)
+            
+            self.widget.start_capture()
+    
+    def capture_with_system_tool(self):
+        """
+        Use system screenshot tool for better compatibility
         
-        self.widget.start_capture()
+        This method:
+        1. Hides the main window
+        2. Calls system screenshot tool (gnome-screenshot, spectacle, flameshot, etc.)
+        3. Waits for user to save the screenshot
+        4. Loads the screenshot for OCR
+        5. Restores the main window
+        """
+        # Hide the main window temporarily
+        if self.parent:
+            self.parent.hide()
+        
+        # Create a temporary file for the screenshot
+        self.temp_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+        temp_path = self.temp_file.name
+        self.temp_file.close()
+        
+        # Try different screenshot tools in order of preference
+        screenshot_tools = [
+            # GNOME Screenshot (most common on Ubuntu)
+            ['gnome-screenshot', '-a', '-f', temp_path],
+            # KDE Spectacle
+            ['spectacle', '-b', '-r', '-n', '-o', temp_path],
+            # Flameshot
+            ['flameshot', 'gui', '-p', temp_path],
+            # ImageMagick import
+            ['import', temp_path],
+            # Scrot
+            ['scrot', '-s', temp_path],
+        ]
+        
+        success = False
+        for tool_cmd in screenshot_tools:
+            try:
+                # Check if tool exists
+                tool_name = tool_cmd[0]
+                check_cmd = ['which', tool_name]
+                result = subprocess.run(check_cmd, capture_output=True, timeout=1)
+                
+                if result.returncode == 0:
+                    print(f"Using screenshot tool: {tool_name}", file=sys.stderr)
+                    
+                    # Run the screenshot tool
+                    # Use subprocess.Popen to run asynchronously
+                    process = subprocess.Popen(
+                        tool_cmd,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE
+                    )
+                    
+                    # Wait for the screenshot to be saved
+                    # Check periodically if file exists and has content
+                    QTimer.singleShot(500, lambda: self.check_screenshot_file(temp_path, process, 0))
+                    success = True
+                    break
+                    
+            except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:
+                continue
+        
+        if not success:
+            print("Error: No system screenshot tool found", file=sys.stderr)
+            print("Tried: gnome-screenshot, spectacle, flameshot, import, scrot", file=sys.stderr)
+            print("Falling back to built-in screenshot method", file=sys.stderr)
+            
+            # Clean up temp file
+            try:
+                os.unlink(temp_path)
+            except:
+                pass
+            
+            # Restore window
+            if self.parent:
+                self.parent.show()
+            
+            # Fallback to built-in method
+            self.use_system_tool = False
+            if not self.widget:
+                self.widget = ScreenshotWidget()
+                self.widget.screenshot_taken.connect(self.on_screenshot_taken)
+            
+            self.widget.start_capture()
+    
+    def check_screenshot_file(self, temp_path, process, retry_count):
+        """
+        Check if screenshot file has been created and has content
+        
+        Args:
+            temp_path: Path to temporary screenshot file
+            process: The subprocess running the screenshot tool
+            retry_count: Number of times we've checked
+        """
+        max_retries = 60  # Check for up to 30 seconds (60 * 0.5s)
+        
+        # Check if process has finished
+        poll_result = process.poll()
+        
+        # Check if file exists and has content
+        if os.path.exists(temp_path) and os.path.getsize(temp_path) > 0:
+            # File is ready, load it
+            print(f"Screenshot saved to {temp_path}", file=sys.stderr)
+            
+            try:
+                # Load the image
+                image = Image.open(temp_path)
+                
+                # Clean up temp file
+                try:
+                    os.unlink(temp_path)
+                except:
+                    pass
+                
+                # Restore window
+                if self.parent:
+                    self.parent.show()
+                
+                # Call callback
+                if self.callback:
+                    self.callback(image)
+                    
+            except Exception as e:
+                print(f"Error loading screenshot: {e}", file=sys.stderr)
+                
+                # Clean up temp file
+                try:
+                    os.unlink(temp_path)
+                except:
+                    pass
+                
+                # Restore window
+                if self.parent:
+                    self.parent.show()
+                
+                # Call callback with None
+                if self.callback:
+                    self.callback(None)
+        
+        elif poll_result is not None and poll_result != 0:
+            # Process finished with error
+            print(f"Screenshot tool exited with code {poll_result}", file=sys.stderr)
+            
+            # Clean up temp file
+            try:
+                os.unlink(temp_path)
+            except:
+                pass
+            
+            # Restore window
+            if self.parent:
+                self.parent.show()
+            
+            # Call callback with None (user cancelled)
+            if self.callback:
+                self.callback(None)
+        
+        elif poll_result is not None:
+            # Process finished successfully but file doesn't exist yet
+            # This might mean user cancelled
+            if retry_count < 5:
+                # Wait a bit longer in case file is being written
+                QTimer.singleShot(200, lambda: self.check_screenshot_file(temp_path, process, retry_count + 1))
+            else:
+                print("Screenshot tool finished but no file created (user may have cancelled)", file=sys.stderr)
+                
+                # Clean up temp file
+                try:
+                    os.unlink(temp_path)
+                except:
+                    pass
+                
+                # Restore window
+                if self.parent:
+                    self.parent.show()
+                
+                # Call callback with None
+                if self.callback:
+                    self.callback(None)
+        
+        elif retry_count >= max_retries:
+            # Timeout
+            print("Timeout waiting for screenshot", file=sys.stderr)
+            
+            # Try to terminate the process
+            try:
+                process.terminate()
+            except:
+                pass
+            
+            # Clean up temp file
+            try:
+                os.unlink(temp_path)
+            except:
+                pass
+            
+            # Restore window
+            if self.parent:
+                self.parent.show()
+            
+            # Call callback with None
+            if self.callback:
+                self.callback(None)
+        
+        else:
+            # Still waiting, check again
+            QTimer.singleShot(500, lambda: self.check_screenshot_file(temp_path, process, retry_count + 1))
     
     def on_screenshot_taken(self, image):
         """Handle screenshot taken"""
