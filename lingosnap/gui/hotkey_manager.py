@@ -17,15 +17,14 @@ class HotkeyListener(QThread):
     
     def __init__(self):
         super().__init__()
-        self.running = False
+        self.running = True  # Start as True so listener runs
         self.ctrl_pressed = False
         self.c_press_count = 0
         self.last_c_press_time = 0
+        self.listener = None
     
     def run(self):
         """Run the hotkey listener"""
-        self.running = True
-        
         def on_press(key):
             try:
                 # Track Ctrl key
@@ -69,11 +68,19 @@ class HotkeyListener(QThread):
         # Start listener
         try:
             print("Starting hotkey listener...", file=sys.stderr)
-            with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
-                while self.running:
-                    time.sleep(0.1)
-                listener.stop()
+            self.listener = keyboard.Listener(on_press=on_press, on_release=on_release)
+            self.listener.start()
+            print("Hotkey listener started successfully", file=sys.stderr)
+            
+            # Keep the thread alive while running
+            while self.running:
+                time.sleep(0.1)
+            
+            # Stop listener when running becomes False
+            if self.listener:
+                self.listener.stop()
             print("Hotkey listener stopped.", file=sys.stderr)
+            
         except Exception as e:
             error_msg = f"Failed to start hotkey listener: {e}"
             print(f"ERROR: {error_msg}", file=sys.stderr)
@@ -82,6 +89,8 @@ class HotkeyListener(QThread):
     def stop(self):
         """Stop the listener"""
         self.running = False
+        if self.listener:
+            self.listener.stop()
 
 
 class HotkeyManager(QObject):

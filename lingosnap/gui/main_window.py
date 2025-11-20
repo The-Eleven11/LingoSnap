@@ -2,6 +2,7 @@
 Main application window with system tray
 """
 
+import sys
 from PyQt6.QtWidgets import (QMainWindow, QTabWidget, QSystemTrayIcon, 
                              QMenu, QApplication, QMessageBox)
 from PyQt6.QtCore import Qt, QTimer
@@ -117,8 +118,40 @@ class MainWindow(QMainWindow):
         self.hotkey_manager.text_capture_triggered.connect(self.on_text_capture)
         self.hotkey_manager.ocr_capture_triggered.connect(self.on_ocr_capture)
         
+        # Connect error handler
+        self.hotkey_manager.listener.error_occurred.connect(self.on_hotkey_error)
+        
         # Start hotkey monitoring
         self.hotkey_manager.start()
+        
+        # Give it a moment to start, then check if it's running
+        QTimer.singleShot(500, self.check_hotkey_status)
+    
+    def check_hotkey_status(self):
+        """Check if hotkeys started successfully"""
+        if not self.hotkey_manager.listener.isRunning():
+            QMessageBox.warning(
+                self,
+                'Hotkey Warning',
+                'Global hotkeys may not be working.\n\n'
+                'This can happen if:\n'
+                '- The application lacks necessary permissions\n'
+                '- Another application is blocking keyboard access\n\n'
+                'You can still use the application by typing text directly,\n'
+                'but the Ctrl+C+C and Ctrl+F8 hotkeys may not work.\n\n'
+                'Try running from terminal to see detailed error messages:\n'
+                'lingosnap'
+            )
+    
+    def on_hotkey_error(self, error_msg):
+        """Handle hotkey errors"""
+        print(f"Hotkey error in main window: {error_msg}", file=sys.stderr)
+        QMessageBox.critical(
+            self,
+            'Hotkey Error',
+            f'Hotkey system encountered an error:\n\n{error_msg}\n\n'
+            'Hotkeys may not function correctly.'
+        )
     
     def on_text_capture(self):
         """Handle text capture hotkey"""
