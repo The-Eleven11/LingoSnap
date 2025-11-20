@@ -49,15 +49,32 @@ class TextTranslateTab(QWidget):
         
         layout.addLayout(lang_layout)
         
-        # Text boxes layout
+        # Text boxes layout with OCR button
         text_layout = QHBoxLayout()
         
-        # Source text box
+        # Source text box container with OCR button
+        source_container = QWidget()
+        source_layout = QVBoxLayout()
+        source_layout.setContentsMargins(0, 0, 0, 0)
+        
         self.source_text = QTextEdit()
         self.source_text.setPlaceholderText('Enter text to translate...')
         self.source_text.setFont(QFont('Arial', 12))
         self.source_text.textChanged.connect(self.on_source_text_changed)
-        text_layout.addWidget(self.source_text)
+        source_layout.addWidget(self.source_text)
+        
+        # OCR button at bottom right
+        ocr_button_layout = QHBoxLayout()
+        ocr_button_layout.addStretch()
+        self.ocr_button = QPushButton('📷 OCR Screenshot')
+        self.ocr_button.setToolTip('Click to capture text from screen (or press Ctrl+F8)')
+        self.ocr_button.clicked.connect(self.on_ocr_button_clicked)
+        self.ocr_button.setMaximumWidth(150)
+        ocr_button_layout.addWidget(self.ocr_button)
+        source_layout.addLayout(ocr_button_layout)
+        
+        source_container.setLayout(source_layout)
+        text_layout.addWidget(source_container)
         
         # Target text box
         self.target_text = QTextEdit()
@@ -208,11 +225,23 @@ class TextTranslateTab(QWidget):
         self.engine = engine
         self.load_languages()
     
+    def on_ocr_button_clicked(self):
+        """Handle OCR button click"""
+        # Trigger the same action as Ctrl+F8 hotkey
+        # Get the main window to trigger screenshot
+        main_window = self.window()
+        if hasattr(main_window, 'on_ocr_capture'):
+            main_window.on_ocr_capture()
+    
     def apply_translations(self, lang: str):
         """Apply UI translations"""
         if lang == 'zh':
             self.source_text.setPlaceholderText('输入要翻译的文本...')
             self.target_text.setPlaceholderText('翻译结果将显示在这里...')
+            self.ocr_button.setText('📷 OCR截图')
+            self.ocr_button.setToolTip('点击从屏幕捕获文本（或按 Ctrl+F8）')
         else:
             self.source_text.setPlaceholderText('Enter text to translate...')
             self.target_text.setPlaceholderText('Translation will appear here...')
+            self.ocr_button.setText('📷 OCR Screenshot')
+            self.ocr_button.setToolTip('Click to capture text from screen (or press Ctrl+F8)')

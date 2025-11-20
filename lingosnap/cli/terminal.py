@@ -121,6 +121,17 @@ def main():
     if not target_lang:
         target_lang = config.get('terminal_default_target', 'zh')
     
+    # Normalize language code for the engine
+    # Google uses 'zh-cn', Argos uses 'zh'
+    if engine_type == 'google':
+        # Convert simplified codes to Google format
+        if target_lang == 'zh':
+            target_lang = 'zh-cn'
+    else:  # argos
+        # Convert Google format to simplified codes
+        if target_lang == 'zh-cn' or target_lang == 'zh-tw':
+            target_lang = 'zh'
+    
     # Validate target language
     supported_langs = engine.get_supported_languages()
     lang_codes = [code for code, _ in supported_langs]
