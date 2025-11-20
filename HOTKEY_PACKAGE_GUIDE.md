@@ -69,6 +69,38 @@ This guide addresses the features mentioned in the user feedback.
 
 ## 2. 快捷键功能 / Hotkey Functionality
 
+### ⚠️ 重要更新 / Important Update (2025-11-20)
+
+**中文：**
+最新版本(commit 845b860)修复了快捷键监听器立即停止的问题。如果您看到：
+```
+Starting hotkey listener...
+Hotkey listener stopped.
+```
+
+这个问题已经被修复。更新后，应用程序会：
+- 自动检查快捷键监听器是否成功启动
+- 如果启动失败，显示警告对话框并提供帮助信息
+- 提供更详细的错误日志用于排查问题
+
+如果快捷键仍然不工作，可能是权限问题（见下面的故障排除）。
+
+**English:**
+The latest version (commit 845b860) fixes the issue where hotkey listener stops immediately. If you see:
+```
+Starting hotkey listener...
+Hotkey listener stopped.
+```
+
+This issue has been fixed. After updating, the application will:
+- Automatically check if hotkey listener started successfully
+- Show a warning dialog if startup fails with helpful information
+- Provide more detailed error logs for troubleshooting
+
+If hotkeys still don't work, it may be a permission issue (see troubleshooting below).
+
+---
+
 ### 快捷键说明 / Hotkey Instructions
 
 LingoSnap 提供两个全局快捷键 / LingoSnap provides two global hotkeys:
@@ -145,6 +177,79 @@ If hotkeys are not working, follow these steps to test:
 6. Check status information to confirm hotkey listener is running
 
 ### 快捷键故障排除 / Hotkey Troubleshooting
+
+**问题 / Issue:** 快捷键监听器立即停止 / Hotkey listener stops immediately
+
+**症状 / Symptoms:**
+```
+Hotkey manager started successfully
+Starting hotkey listener...
+Hotkey listener stopped.
+```
+
+**解决方法 / Solution:**
+
+**中文：**
+这个问题在最新版本（commit 845b860）中已经修复。如果您遇到此问题：
+
+1. **更新代码**：
+   ```bash
+   git pull origin copilot/complete-project-requirements
+   pip install -e .
+   ```
+
+2. **Linux 权限问题**：
+   如果更新后仍有问题，可能需要输入设备权限：
+   ```bash
+   # 将用户添加到 input 组
+   sudo usermod -a -G input $USER
+   # 注销并重新登录以使更改生效
+   ```
+
+3. **检查显示服务器**：
+   ```bash
+   # 检查是否使用 Wayland
+   echo $XDG_SESSION_TYPE
+   
+   # 如果是 Wayland，尝试切换到 X11
+   # 在登录屏幕选择 "Ubuntu on Xorg"
+   ```
+
+4. **启用辅助功能**（某些桌面环境需要）：
+   - GNOME: 设置 → 辅助功能 → 启用辅助功能
+   - KDE: 系统设置 → 辅助功能
+
+**English:**
+This issue has been fixed in the latest version (commit 845b860). If you encounter this:
+
+1. **Update the code**:
+   ```bash
+   git pull origin copilot/complete-project-requirements
+   pip install -e .
+   ```
+
+2. **Linux permission issues**:
+   If still having issues after update, you may need input device permissions:
+   ```bash
+   # Add user to input group
+   sudo usermod -a -G input $USER
+   # Logout and login again for changes to take effect
+   ```
+
+3. **Check display server**:
+   ```bash
+   # Check if using Wayland
+   echo $XDG_SESSION_TYPE
+   
+   # If Wayland, try switching to X11
+   # Select "Ubuntu on Xorg" at login screen
+   ```
+
+4. **Enable accessibility** (required on some desktop environments):
+   - GNOME: Settings → Universal Access → Enable accessibility
+   - KDE: System Settings → Accessibility
+
+---
 
 **问题 / Issue:** 快捷键无响应 / Hotkeys not responding
 
