@@ -337,7 +337,7 @@ class ScreenshotTool:
             process: The subprocess running flameshot
             retry_count: Number of times we've checked
         """
-        max_retries = 240  # Check for up to 2 minutes (240 * 0.5s) - give user time to select
+        max_retries = 60  # Check for up to 30 seconds (60 * 0.5s)
         
         # Check if process has finished
         poll_result = process.poll()
@@ -398,9 +398,13 @@ class ScreenshotTool:
                 self.callback(None)
         
         elif retry_count >= max_retries:
-            # Timeout - but this shouldn't happen with 2 minute timeout
-            print("Timeout waiting for screenshot (2 minutes)", file=sys.stderr)
-            print("Tip: After selecting region in flameshot, click the checkmark (✓) or press Enter", file=sys.stderr)
+            # Timeout
+            print("Timeout waiting for screenshot (30 seconds)", file=sys.stderr)
+            print("Flameshot process still running but no output received", file=sys.stderr)
+            print("This may indicate:", file=sys.stderr)
+            print("  1. Screenshot was cancelled (pressed ESC)", file=sys.stderr)
+            print("  2. Flameshot GUI still open - click checkmark (✓) or press Enter", file=sys.stderr)
+            print("  3. System issue preventing capture", file=sys.stderr)
             
             # Try to terminate the process
             try:
@@ -428,11 +432,11 @@ class ScreenshotTool:
         
         else:
             # Still waiting, check again
-            # Print progress every 10 seconds to let user know we're waiting
-            if retry_count > 0 and retry_count % 20 == 0:
+            # Print progress every 5 seconds to let user know we're waiting
+            if retry_count > 0 and retry_count % 10 == 0:
                 elapsed = retry_count * 0.5
                 print(f"Still waiting for screenshot... ({elapsed:.0f}s elapsed)", file=sys.stderr)
-                print("Remember to click the checkmark (✓) in flameshot after selecting region", file=sys.stderr)
+                print("After selecting region, click the checkmark (✓) or press Enter", file=sys.stderr)
             
             QTimer.singleShot(500, lambda: self.check_flameshot_stdout(temp_path, process, retry_count + 1))
     
@@ -445,7 +449,7 @@ class ScreenshotTool:
             process: The subprocess running the screenshot tool
             retry_count: Number of times we've checked
         """
-        max_retries = 240  # Check for up to 2 minutes (240 * 0.5s) - give user time
+        max_retries = 60  # Check for up to 30 seconds (60 * 0.5s)
         
         # Check if process has finished
         poll_result = process.poll()
@@ -533,8 +537,8 @@ class ScreenshotTool:
         
         elif retry_count >= max_retries:
             # Timeout
-            print("Timeout waiting for screenshot (2 minutes)", file=sys.stderr)
-            print("Screenshot tool may still be waiting for your selection", file=sys.stderr)
+            print("Timeout waiting for screenshot (30 seconds)", file=sys.stderr)
+            print("Screenshot tool may still be waiting for your selection or cancelled", file=sys.stderr)
             
             # Try to terminate the process
             try:

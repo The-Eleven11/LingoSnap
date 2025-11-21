@@ -387,7 +387,7 @@ If you see "Timeout waiting for screenshot" error, it usually means flameshot is
    If you:
    - 按 ESC = 取消截图 / Press ESC = Cancel screenshot
    - 关闭 flameshot = 取消截图 / Close flameshot = Cancel screenshot
-   - 什么都不做 = 超时（2分钟）/ Do nothing = Timeout (2 minutes)
+   - 什么都不做 = 超时（30秒）/ Do nothing = Timeout (30 seconds)
 
 5. **LingoSnap 自动处理 / LingoSnap Auto-processes**
    - 确认后，LingoSnap 自动加载截图
@@ -398,6 +398,32 @@ If you see "Timeout waiting for screenshot" error, it usually means flameshot is
    - Automatic translation
 
 ### 常见问题 / Common Issues
+
+**Q: 我点击了确认按钮（✓），但还是超时了？**
+
+A: 这可能是以下原因：
+1. **进程问题**：flameshot 进程可能卡住了
+   - 解决：关闭 flameshot，重启 LingoSnap
+2. **系统权限**：可能缺少某些权限
+   - 解决：尝试其他截图工具（gnome-screenshot）
+3. **Wayland 限制**：某些情况下 stdout 输出被阻止
+   - 解决：切换到 Xorg 桌面环境
+4. **快速操作**：选择后立即确认
+   - 解决：选择区域后稍等0.5秒再点确认
+
+**Q: I clicked the checkmark (✓) but it still times out?**
+
+A: This may be due to:
+1. **Process issue**: flameshot process may be stuck
+   - Solution: Close flameshot, restart LingoSnap
+2. **System permissions**: May be missing some permissions
+   - Solution: Try other screenshot tools (gnome-screenshot)
+3. **Wayland restrictions**: In some cases stdout output is blocked
+   - Solution: Switch to Xorg desktop environment
+4. **Too fast**: Confirming immediately after selection
+   - Solution: Wait 0.5s after selecting region before confirming
+
+---
 
 **Q: 为什么一直显示 "Timeout waiting for screenshot"？**
 
@@ -456,10 +482,13 @@ sudo apt install gnome-screenshot imagemagick scrot
    - ESC = 取消 / Cancel
    - 双击 = 快速确认 / Double-click = Quick confirm
 
-4. **耐心等待 / Be Patient**
-   - LingoSnap 会等待最多 2 分钟 / LingoSnap waits up to 2 minutes
-   - 每 10 秒显示一次进度 / Progress shown every 10 seconds
-   - 看到 "Still waiting..." 是正常的 / Seeing "Still waiting..." is normal
+4. **超时设置 / Timeout Settings**
+   - LingoSnap 会等待最多 30 秒 / LingoSnap waits up to 30 seconds
+   - 每 5 秒显示一次进度 / Progress shown every 5 seconds
+   - 如果超时可能是：/ If timeout occurs it may be:
+     - 按了 ESC 取消 / Pressed ESC to cancel
+     - 未点击确认按钮 / Didn't click confirmation button
+     - 系统问题 / System issue
 
 ## 总结 / Summary
 
