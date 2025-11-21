@@ -36,10 +36,25 @@ class OCREngine:
             Extracted text
         """
         try:
-            # Perform OCR
-            text = pytesseract.image_to_string(image, lang=lang)
+            # Perform OCR with optimized config for faster processing
+            # PSM 3 = Fully automatic page segmentation (default)
+            # OEM 3 = Default OCR Engine Mode (best available)
+            config = '--psm 3 --oem 3'
+            
+            # Add timeout to prevent hanging
+            # Tesseract can sometimes hang on certain images
+            text = pytesseract.image_to_string(
+                image, 
+                lang=lang,
+                config=config,
+                timeout=30  # 30 second timeout
+            )
             return text.strip()
+        except pytesseract.TesseractError as e:
+            # Tesseract-specific error
+            raise Exception(f"OCR failed: {str(e)}")
         except Exception as e:
+            # Other errors (including timeout)
             raise Exception(f"OCR failed: {str(e)}")
     
     def extract_text_from_file(self, image_path: str, lang: str = 'eng') -> str:
