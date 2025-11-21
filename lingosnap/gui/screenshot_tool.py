@@ -337,7 +337,7 @@ class ScreenshotTool:
             process: The subprocess running flameshot
             retry_count: Number of times we've checked
         """
-        max_retries = 60  # Check for up to 30 seconds (60 * 0.5s)
+        max_retries = 240  # Check for up to 2 minutes (240 * 0.5s) - give user time to select
         
         # Check if process has finished
         poll_result = process.poll()
@@ -354,7 +354,7 @@ class ScreenshotTool:
                         with open(temp_path, 'wb') as f:
                             f.write(stdout_data)
                         
-                        print(f"Screenshot captured from flameshot stdout", file=sys.stderr)
+                        print(f"Screenshot captured from flameshot ({len(stdout_data)} bytes)", file=sys.stderr)
                         
                         # Load the image
                         image = Image.open(temp_path)
@@ -375,13 +375,13 @@ class ScreenshotTool:
                         return
                     else:
                         # No data - user cancelled
-                        print("Screenshot tool finished but no data captured (user may have cancelled)", file=sys.stderr)
+                        print("Flameshot: No screenshot captured (cancelled or ESC pressed)", file=sys.stderr)
                         
                 except Exception as e:
                     print(f"Error reading flameshot output: {e}", file=sys.stderr)
             else:
                 # Process finished with error
-                print(f"Screenshot tool exited with code {poll_result}", file=sys.stderr)
+                print(f"Flameshot exited with code {poll_result}", file=sys.stderr)
             
             # Clean up temp file
             try:
@@ -398,14 +398,19 @@ class ScreenshotTool:
                 self.callback(None)
         
         elif retry_count >= max_retries:
-            # Timeout
-            print("Timeout waiting for screenshot", file=sys.stderr)
+            # Timeout - but this shouldn't happen with 2 minute timeout
+            print("Timeout waiting for screenshot (2 minutes)", file=sys.stderr)
+            print("Tip: After selecting region in flameshot, click the checkmark (✓) or press Enter", file=sys.stderr)
             
             # Try to terminate the process
             try:
                 process.terminate()
+                process.wait(timeout=2)
             except:
-                pass
+                try:
+                    process.kill()
+                except:
+                    pass
             
             # Clean up temp file
             try:
@@ -423,6 +428,12 @@ class ScreenshotTool:
         
         else:
             # Still waiting, check again
+            # Print progress every 10 seconds to let user know we're waiting
+            if retry_count > 0 and retry_count % 20 == 0:
+                elapsed = retry_count * 0.5
+                print(f"Still waiting for screenshot... ({elapsed:.0f}s elapsed)", file=sys.stderr)
+                print("Remember to click the checkmark (✓) in flameshot after selecting region", file=sys.stderr)
+            
             QTimer.singleShot(500, lambda: self.check_flameshot_stdout(temp_path, process, retry_count + 1))
     
     def check_screenshot_file(self, temp_path, process, retry_count):
@@ -434,7 +445,7 @@ class ScreenshotTool:
             process: The subprocess running the screenshot tool
             retry_count: Number of times we've checked
         """
-        max_retries = 60  # Check for up to 30 seconds (60 * 0.5s)
+        max_retries = 240  # Check for up to 2 minutes (240 * 0.5s) - give user time
         
         # Check if process has finished
         poll_result = process.poll()
@@ -522,13 +533,18 @@ class ScreenshotTool:
         
         elif retry_count >= max_retries:
             # Timeout
-            print("Timeout waiting for screenshot", file=sys.stderr)
+            print("Timeout waiting for screenshot (2 minutes)", file=sys.stderr)
+            print("Screenshot tool may still be waiting for your selection", file=sys.stderr)
             
             # Try to terminate the process
             try:
                 process.terminate()
+                process.wait(timeout=2)
             except:
-                pass
+                try:
+                    process.kill()
+                except:
+                    pass
             
             # Clean up temp file
             try:
@@ -546,6 +562,11 @@ class ScreenshotTool:
         
         else:
             # Still waiting, check again
+            # Print progress every 10 seconds to let user know we're waiting
+            if retry_count > 0 and retry_count % 20 == 0:
+                elapsed = retry_count * 0.5
+                print(f"Still waiting for screenshot... ({elapsed:.0f}s elapsed)", file=sys.stderr)
+            
             QTimer.singleShot(500, lambda: self.check_screenshot_file(temp_path, process, retry_count + 1))
     
     def on_screenshot_taken(self, image):

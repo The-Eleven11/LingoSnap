@@ -346,6 +346,121 @@ cat lingosnap-diagnostic.txt
    - USAGE.md
    - HOTKEY_FIX_GUIDE.md
 
+## 如何正确使用 Flameshot / How to Use Flameshot Correctly
+
+### 问题：Timeout waiting for screenshot
+
+如果您看到 "Timeout waiting for screenshot" 错误，这通常意味着 flameshot 正在等待您完成截图操作。
+
+If you see "Timeout waiting for screenshot" error, it usually means flameshot is waiting for you to complete the screenshot operation.
+
+### Flameshot 使用步骤 / Flameshot Usage Steps
+
+1. **点击 OCR 按钮 / Click OCR Button**
+   - 在 LingoSnap 文本翻译标签中点击 "📷 OCR Screenshot" 按钮
+   - Click "📷 OCR Screenshot" button in LingoSnap Text Translate tab
+
+2. **Flameshot 界面出现 / Flameshot Interface Appears**
+   - 屏幕会显示 flameshot 的截图界面
+   - Screen will show flameshot screenshot interface
+   - 鼠标指针变成十字光标
+   - Mouse cursor becomes crosshair
+
+3. **选择区域 / Select Region**
+   - 点击并拖动鼠标选择要识别的文本区域
+   - Click and drag to select the text region you want to recognize
+   - 选择清晰、对比度高的文本
+   - Select clear, high-contrast text
+
+4. **⭐ 重要：确认选择 / Important: Confirm Selection ⭐**
+   
+   **这是最关键的步骤！/ This is the most critical step!**
+   
+   选择区域后，您必须确认：
+   After selecting the region, you MUST confirm:
+   
+   - **点击绿色的勾号 ✓ / Click the green checkmark ✓**
+   - **或按 Enter 键 / Or press Enter key**
+   - **或双击选择区域 / Or double-click the selected region**
+   
+   如果您：
+   If you:
+   - 按 ESC = 取消截图 / Press ESC = Cancel screenshot
+   - 关闭 flameshot = 取消截图 / Close flameshot = Cancel screenshot
+   - 什么都不做 = 超时（2分钟）/ Do nothing = Timeout (2 minutes)
+
+5. **LingoSnap 自动处理 / LingoSnap Auto-processes**
+   - 确认后，LingoSnap 自动加载截图
+   - After confirmation, LingoSnap automatically loads the screenshot
+   - OCR 识别文本
+   - OCR recognizes text
+   - 自动翻译
+   - Automatic translation
+
+### 常见问题 / Common Issues
+
+**Q: 为什么一直显示 "Timeout waiting for screenshot"？**
+
+A: 您可能忘记点击确认按钮（✓）或按 Enter。选择区域后必须确认！
+
+**Q: Why does it keep showing "Timeout waiting for screenshot"?**
+
+A: You may have forgotten to click the confirmation button (✓) or press Enter. You MUST confirm after selecting the region!
+
+---
+
+**Q: 我按了 ESC，现在什么都没发生？**
+
+A: 按 ESC 会取消截图。重新点击 OCR 按钮再试一次。
+
+**Q: I pressed ESC, now nothing happens?**
+
+A: Pressing ESC cancels the screenshot. Click the OCR button again to retry.
+
+---
+
+**Q: Flameshot 太慢了，有更快的方法吗？**
+
+A: 试试其他截图工具：
+- gnome-screenshot (Ubuntu 自带)
+- import (ImageMagick)
+- scrot (轻量级)
+
+**Q: Flameshot is too slow, is there a faster way?**
+
+A: Try other screenshot tools:
+- gnome-screenshot (pre-installed on Ubuntu)
+- import (ImageMagick)
+- scrot (lightweight)
+
+安装替代工具：
+Install alternative tools:
+```bash
+sudo apt install gnome-screenshot imagemagick scrot
+```
+
+### 提示 / Tips
+
+1. **选择合适大小的区域 / Select Appropriately Sized Regions**
+   - 不要选择整个屏幕 / Don't select entire screen
+   - 只选择需要翻译的文本 / Only select text you need to translate
+   - 清晰的文本识别更快 / Clear text recognizes faster
+
+2. **确保文本清晰 / Ensure Text is Clear**
+   - 文本大小适中 / Moderate text size
+   - 高对比度（黑字白底最佳）/ High contrast (black on white is best)
+   - 避免模糊或扭曲的文本 / Avoid blurry or distorted text
+
+3. **使用快捷键 / Use Shortcuts**
+   - Enter = 确认 / Confirm
+   - ESC = 取消 / Cancel
+   - 双击 = 快速确认 / Double-click = Quick confirm
+
+4. **耐心等待 / Be Patient**
+   - LingoSnap 会等待最多 2 分钟 / LingoSnap waits up to 2 minutes
+   - 每 10 秒显示一次进度 / Progress shown every 10 seconds
+   - 看到 "Still waiting..." 是正常的 / Seeing "Still waiting..." is normal
+
 ## 总结 / Summary
 
 **最佳实践 / Best Practices:**
