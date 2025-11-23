@@ -1,0 +1,13 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@ --with python3 --buildsystem=pybuild
+
+override_dh_auto_install:
+	python3 setup.py install --root=debian/lingosnap --install-layout=deb
+
+override_dh_installchangelogs:
+	dh_installchangelogs
+
+override_dh_installdocs:
+	dh_installdocs README.md

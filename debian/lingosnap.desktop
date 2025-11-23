@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=LingoSnap
+Comment=Instant translation at your fingertips
+Exec=lingosnap
+Icon=lingosnap
+Terminal=false
+Categories=Office;Utility;
+StartupNotify=true
+X-GNOME-Autostart-enabled=true

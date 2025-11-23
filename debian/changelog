@@ -1,0 +1,11 @@
+lingosnap (0.1.0) unstable; urgency=low
+
+  * Initial release
+  * Text translation with hotkey capture
+  * OCR screenshot translation
+  * Translation history
+  * Multiple engine support (Google, Argos)
+  * Terminal integration
+  * Multi-language UI (English/Chinese)
+
+ -- LingoSnap Team <lingosnap@example.com>  Wed, 19 Nov 2025 22:00:00 +0000
